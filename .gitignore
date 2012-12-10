@@ -19,6 +19,9 @@ Makefile
 cmake_install.cmake
 install_manifest.txt
 
+# generated config file
+src/config.h
+
 # build directory
 build/
 
