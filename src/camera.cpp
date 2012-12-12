@@ -22,10 +22,13 @@ Camera::Camera() {
     imgIdx = START_LED;
     
     /* loading images for test mode */
+    std::stringstream s;
+    s << PATH_ASSETS << "hand/image_ambient.png";
+    ambientImage = cv::imread(s.str(), CV_LOAD_IMAGE_GRAYSCALE);
     for (int i=0; i<8; i++) {
         std::stringstream s;
         s << PATH_ASSETS << "hand/image" << i << ".png";
-        cv::Mat img = cv::imread(s.str(), 0);
+        cv::Mat img = cv::imread(s.str(), CV_LOAD_IMAGE_GRAYSCALE);
         testImages.push_back(img);
     }
 
@@ -53,7 +56,7 @@ bool Camera::open(int deviceIdx) {
     }
 
     /* reset camera to initial state with default values */
-    resetCamera();
+    resetCameraRegister();
 
     /* prepare camera for ringlight leds */
     configureOutputPins();
@@ -111,6 +114,9 @@ bool Camera::open(int deviceIdx) {
         cleanup(camera);
         return false;
     }
+    
+    /* capture image with no LEDs to subtract ambient light */
+    captureAmbientImage();
 
     return true;
 }
@@ -204,13 +210,23 @@ void Camera::printStatus() {
     std::cout << "  strobe_1_cnt duration_value  : " << strobe_1_cnt_reg.duration_value << std::endl;
 }
 
+void Camera::captureAmbientImage() {
+    
+    /* capture image with no LEDs to subtract ambient light */
+    ambientImage = cv::Mat(camFrameHeight, camFrameWidth, CV_8UC1);
+    dc1394video_frame_t *frame = NULL;
+    error = dc1394_capture_dequeue(camera, DC1394_CAPTURE_POLICY_WAIT, &frame);
+    memcpy(ambientImage.data, frame->image, camFrameHeight*camFrameWidth*sizeof(uchar));
+    dc1394_capture_enqueue(camera, frame);
+}
+
 void Camera::captureFrame() {
 
     cv::Mat camFrame(camFrameHeight, camFrameWidth, CV_8UC1);
     imgIdx = (imgIdx+1) % 8;
 
     if (testMode) {
-        camFrame = testImages[imgIdx];
+        camFrame = testImages[imgIdx].clone();
         /* faking camera image acquisition time */
         eventLoopTimer->setInterval(1000/FRAME_RATE);
     } else {
@@ -219,6 +235,9 @@ void Camera::captureFrame() {
         camFrame.data = frame->image;
         dc1394_capture_enqueue(camera, frame);
     }
+    
+    /* remove ambient light */
+    camFrame -= ambientImage;
     
     /* cropping image in center to power-of-2 size */
     cv::Rect cropped((camFrame.cols-width)/2, (camFrame.rows-height)/2, width, height);
@@ -242,7 +261,7 @@ void Camera::writeRegisterContent(uint64_t offset, uint32_t value) {
     dc1394_set_control_registers(camera, offset, &value, 1);
 }
 
-void Camera::resetCamera() {
+void Camera::resetCameraRegister() {
 
     uint64_t addr = INITIALIZE;
     cam_init_reg32 reg = readRegisterContent(addr);

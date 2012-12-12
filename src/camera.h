@@ -65,6 +65,7 @@ private:
 
     QTimer *eventLoopTimer;
     std::vector<cv::Mat> testImages;
+    cv::Mat ambientImage;
     bool testMode;
     int imgIdx;
     int FRAME_RATE;
@@ -77,7 +78,8 @@ private:
     typedef pio_dir_reg<uint32_t> pio_dir_reg32;
     typedef cam_ini_reg<uint32_t> cam_init_reg32;
 
-    void resetCamera();
+    void captureAmbientImage();
+    void resetCameraRegister();
     void startResetPulse();
     void stopResetPulse();
     void startClockPulse();
