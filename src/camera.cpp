@@ -12,9 +12,24 @@ Camera::Camera() {
     numCams = camList->num;
     numDMABuffers = 3;
     FRAME_RATE = 15;
+    
+    /* undistort camera matrices */
+    K = cv::Mat::eye(3, 3, CV_64FC1);
+    K.at<double>(0,0) = 751.79662626559286; /* fx */
+    K.at<double>(1,1) = 750.65231364204442; /* fy */
+    K.at<double>(0,2) = 306.70009070155015; /* cx */
+    K.at<double>(1,2) = 216.11302664191402; /* cy */
+    
+    dist = cv::Mat::zeros(1, 4, CV_64FC1);
+    dist.at<double>(0,0) = -0.38694196102815248;  /* dist1 */
+    dist.at<double>(0,1) = 0.15311947060864667;   /* dist2 */
+    dist.at<double>(0,2) = 0.002582758567387712;  /* dist3 */
+    dist.at<double>(0,3) = 0.0036405418524754108; /* dist4 */
+    
     /* minimum resolution of camera */
     camFrameHeight = IMG_HEIGHT;
     camFrameWidth = IMG_WIDTH;
+    
     /* we crop images to quadratic dimensions for evenly divisable work-group items */
     height = width = camFrameHeight;
 
@@ -35,11 +50,16 @@ Camera::Camera() {
     /* counter iterating over (modulo 8) LEDs assigning image to current LED */
     imgIdx = 3;
     testMode = false;
+    
+    /* setup undistortion */
+    initUndistLUT();
 }
 
 Camera::~Camera() {
 
     stop();
+    delete[] map1LUT;
+	delete[] map2LUT;
 }
 
 bool Camera::open(int deviceIdx) {
@@ -210,6 +230,47 @@ void Camera::printStatus() {
     std::cout << "  strobe_1_cnt duration_value  : " << strobe_1_cnt_reg.duration_value << std::endl;
 }
 
+void Camera::initUndistLUT() {
+    
+    int stripeSize = std::min(std::max(1, (1 << 12) / std::max(camFrameWidth, 1)), camFrameHeight);
+    cv::Mat map1 = cv::Mat(stripeSize, camFrameWidth, CV_16SC2);
+    cv::Mat map2 = cv::Mat(stripeSize, camFrameWidth, CV_16UC1);
+    
+    map1LUT = new cv::Mat[camFrameHeight];
+    map2LUT = new cv::Mat[camFrameHeight];
+    
+    cv::Mat Ar;
+    K.convertTo(Ar, CV_64F);
+    
+    double v0 = K.at<double>(1,2);
+    for (int y = 0; y < camFrameHeight; y += stripeSize) {
+        int stripe = std::min(stripeSize, camFrameHeight - y);
+        Ar.at<double>(1,2) = v0 - y;
+        cv::Mat map1Part = map1.rowRange(0, stripe);
+        cv::Mat map2Part = map2.rowRange(0, stripe);
+        cv::initUndistortRectifyMap(K, dist, cv::noArray(), Ar, cv::Size(camFrameWidth, stripe), map1Part.type(), map1Part, map2Part);
+        map1LUT[y] = map1Part.clone();
+        map2LUT[y] = map2Part.clone();
+    }
+}
+
+void Camera::undistortLUT(cv::InputArray source, cv::OutputArray dest) {
+    
+    cv::Mat src = source.getMat();
+    dest.create(src.size(), src.type());
+    cv::Mat dst = dest.getMat();
+    
+    int stripeSize = std::min(std::max(1, (1 << 12) / std::max(camFrameWidth, 1)), camFrameHeight);
+    
+    for (int y = 0; y < src.rows; y += stripeSize) {
+        int stripe = std::min(stripeSize, src.rows - y);
+        cv::Mat map1Part = map1LUT[y];
+        cv::Mat map2Part = map2LUT[y];
+        cv::Mat destPart = dst.rowRange(y, y + stripe);
+        cv::remap(src, destPart, map1Part, map2Part, cv::INTER_LINEAR, cv::BORDER_CONSTANT);
+    }
+}
+
 void Camera::captureAmbientImage() {
     
     /* capture image with no LEDs to subtract ambient light */
@@ -222,22 +283,26 @@ void Camera::captureAmbientImage() {
 
 void Camera::captureFrame() {
 
-    cv::Mat camFrame(camFrameHeight, camFrameWidth, CV_8UC1);
+    cv::Mat distortedFrame(camFrameHeight, camFrameWidth, CV_8UC1);
     imgIdx = (imgIdx+1) % 8;
 
     if (testMode) {
-        camFrame = testImages[imgIdx].clone();
+        distortedFrame = testImages[imgIdx].clone();
         /* faking camera image acquisition time */
         eventLoopTimer->setInterval(1000/FRAME_RATE);
     } else {
         dc1394video_frame_t *frame = NULL;
         error = dc1394_capture_dequeue(camera, DC1394_CAPTURE_POLICY_WAIT, &frame);
-        camFrame.data = frame->image;
+        distortedFrame.data = frame->image;
         dc1394_capture_enqueue(camera, frame);
     }
     
     /* remove ambient light */
-    camFrame -= ambientImage;
+    distortedFrame -= ambientImage;
+    
+    /* undistort camera image */
+    cv::Mat camFrame(camFrameHeight, camFrameWidth, CV_8UC1);
+    undistortLUT(distortedFrame, camFrame);
     
     /* cropping image in center to power-of-2 size */
     cv::Rect cropped((camFrame.cols-width)/2, (camFrame.rows-height)/2, width, height);

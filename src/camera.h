@@ -70,6 +70,10 @@ private:
     int imgIdx;
     int FRAME_RATE;
     int camFrameWidth, camFrameHeight;
+    
+    /* undistortion matrices */
+    cv::Mat K, dist;
+    cv::Mat *map1LUT, *map2LUT;
 
     /* typedefs for writing in register */
     typedef strobe_cnt_reg<uint32_t> strobe_cnt_reg32;
@@ -84,6 +88,8 @@ private:
     void stopResetPulse();
     void startClockPulse();
     void stopClockPulse();
+    void initUndistLUT();
+    void undistortLUT(cv::InputArray source, cv::OutputArray dest);
     /** Get the control register value of the camera at given offset */
     uint32_t readRegisterContent(uint64_t offset);
     /** Set control register value of camera at given offset to given value */
