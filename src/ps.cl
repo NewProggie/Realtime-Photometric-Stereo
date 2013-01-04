@@ -57,9 +57,14 @@ __kernel void calcNormals(__read_only image2d_t img1, __read_only image2d_t img2
     uchar8 I = getIntensityVector(i, j, img1, img2, img3, img4, img5, img6, img7, img8);
     float4 n = getNormalVector(Sinv, I);
     
-    /* n = [-s1, -s2, 1]^T [Jaehne2005DBV] */
-    P[(i*width*1)+(j*1)+(0)] = n.x/n.z;
-    Q[(i*width*1)+(j*1)+(0)] = n.y/n.z;
+    /* updated depth gradients from Wei2001 */
+    float maxpq = 4.0f;
+    float p = n.x/n.z;
+    float q = n.y/n.z;
+    if (fabs(p) < maxpq && fabs(q) < maxpq) {
+        P[(i*width*1)+(j*1)+(0)] = p;
+        Q[(i*width*1)+(j*1)+(0)] = q;
+    }
     
     /* offset: (row * numCols * numChannels) + (col * numChannels) + (channel) */
     N[(i*width*3)+(j*3)+(0)] = n.x;
@@ -73,13 +78,16 @@ __kernel void integrate(__global float *P, __global float *Q, __global float *Z,
     int i  = get_global_id(0);
     int j  = get_global_id(1);
     
-    if ( i != 0 || j != 0) {
+    if ( i != 0 && j != 0) {
+        float lambda = 0.5; float mu = 0.5;
         float u = sin((float)(i*2*M_PI_F/height));
         float v = sin((float)(j*2*M_PI_F/width));
-        float uv = u*u + v*v;
-        float d = uv;
+        float l = (1.0f + lambda)*(pow(u,2) + pow(v,2)) + mu*pow((pow(u,2)+pow(v,2)),2);
+        
         /* offset = (row * numCols * numChannels) + (col * numChannels) + channel */
-        Z[(i*width*2)+(j*2)+(0)] = (u*P[(i*width*2)+(j*2)+(1)]  + v*Q[(i*width*2)+(j*2)+(1)]) / d;
-        Z[(i*width*2)+(j*2)+(1)] = (-u*P[(i*width*2)+(j*2)+(0)] - v*Q[(i*width*2)+(j*2)+(0)]) / d;
+        float d1 =  u*P[(i*width*2)+(j*2)+(1)] + v*Q[(i*width*2)+(j*2)+(1)];
+        float d2 = -u*P[(i*width*2)+(j*2)+(0)] - v*Q[(i*width*2)+(j*2)+(0)];
+        Z[(i*width*2)+(j*2)+(0)] = d1 / l;
+        Z[(i*width*2)+(j*2)+(1)] = d2 / l;
     }
 }

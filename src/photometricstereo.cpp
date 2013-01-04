@@ -265,8 +265,8 @@ cv::Mat PhotometricStereo::getGlobalHeights(cv::Mat Pgrads, cv::Mat Qgrads) {
     queue.enqueueReadBuffer(cl_Z, CL_TRUE, 0, imgSize, Z.data);
 
     /* setting unknown average height to zero */
-    Z.at<cv::Vec2f>(0, 0)[0] = 0;
-    Z.at<cv::Vec2f>(0, 0)[1] = 0;
+    Z.at<cv::Vec2f>(0, 0)[0] = 0.0f;
+    Z.at<cv::Vec2f>(0, 0)[1] = 0.0f;
 
     cv::dft(Z, Z, cv::DFT_INVERSE | cv::DFT_SCALE |  cv::DFT_REAL_OUTPUT);
 
