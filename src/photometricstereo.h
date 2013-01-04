@@ -27,9 +27,17 @@ public:
     PhotometricStereo(int width, int height);
     ~PhotometricStereo();
     void execute();
+    float getMaxPQ();
+    float getLambda();
+    float getMu();
+    float getSlope();
     
 public slots:
     void setImage(cv::Mat image);
+    void setMaxPQ(double val);
+    void setLambda(double val);
+    void setMu(double val);
+    void setSlope(int val);
     
 signals:
     void executionTime(QString timeMillis);
@@ -42,22 +50,31 @@ private:
     cl::Context context;
     cl::CommandQueue queue;
     cl::Kernel calcNormKernel, integKernel;
+    
     /* opencl buffer */
     cl::Image2D cl_img1, cl_img2, cl_img3, cl_img4, cl_img5, cl_img6, cl_img7, cl_img8;
     cl::Buffer cl_Pgrads, cl_Qgrads;
     cl::Buffer cl_Sinv, cl_N;
     cl::Buffer cl_P, cl_Q, cl_Z;
+    
     /* debugging variables */
     cl_int error;
     cl::Event event;
     QFuture<void> future;
     QMutex mutex;
     
+    /* ps parameters adjustable by user input */
+    float maxpq;
+    float lambda, mu;
+    float slope;
+    
     /* ps images */
     std::vector<cv::Mat> psImages;
     int imgIdx;
+    
     /* model size */
     int width, height;
+    
     /* non-changing x,y coordinates of 3d model */
     cv::Mat XCoords, YCoords;
     

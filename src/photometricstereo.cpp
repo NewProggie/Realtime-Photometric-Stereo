@@ -23,6 +23,12 @@ PhotometricStereo::PhotometricStereo(int width, int height) : width(width), heig
             YCoords.at<float>(x, y) = y;
         }
     }
+    
+    /* adjustable ps parameters */
+    maxpq = 4.0f;
+    lambda = 0.5f;
+    mu = 0.5f;
+    slope = 1.0f;
 
     /* counter indicating current active LED */
     imgIdx = START_LED;
@@ -75,6 +81,38 @@ long PhotometricStereo::getMilliSecs() {
     timeval t;
     gettimeofday(&t, NULL);
     return t.tv_sec*1000 + t.tv_usec/1000;
+}
+
+void PhotometricStereo::setMaxPQ(double val) {
+    maxpq = (float) val;
+}
+
+float PhotometricStereo::getMaxPQ() {
+    return maxpq;
+}
+
+void PhotometricStereo::setLambda(double val) {
+    lambda = (float) val;
+}
+
+float PhotometricStereo::getLambda() {
+    return lambda;
+}
+
+void PhotometricStereo::setMu(double val) {
+    mu = (float) val;
+}
+
+float PhotometricStereo::getMu() {
+    return mu;
+}
+
+void PhotometricStereo::setSlope(int val) {
+    slope = (float)(val/100.0f)+1.0f;
+}
+
+float PhotometricStereo::getSlope() {
+    return slope;
 }
 
 cv::Mat PhotometricStereo::readCalibratedLights() {
@@ -201,6 +239,8 @@ void PhotometricStereo::execute() {
     calcNormKernel.setArg(11, cl_Pgrads); // P gradients
     calcNormKernel.setArg(12, cl_Qgrads); // Q gradients
     calcNormKernel.setArg(13, cl_N); // normals for each point
+    calcNormKernel.setArg(14, maxpq); // max depth gradients as in [Wei2001]
+    calcNormKernel.setArg(15, slope); // exaggerate slope as in [Malzbender2006]
 
     /* wait for command queue to finish before continuing */
     queue.finish();
@@ -254,6 +294,8 @@ cv::Mat PhotometricStereo::getGlobalHeights(cv::Mat Pgrads, cv::Mat Qgrads) {
     integKernel.setArg(2, cl_Z);
     integKernel.setArg(3, width);
     integKernel.setArg(4, height);
+    integKernel.setArg(5, lambda);
+    integKernel.setArg(6, mu);
 
     /* wait for command queue to finish before continuing */
     queue.finish();

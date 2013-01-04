@@ -6,14 +6,17 @@
 #include <QtGui/QMainWindow>
 #include <QtGui/QWidget>
 #include <QtGui/QMenu>
+#include <QtGui/QGroupBox>
 #include <QtGui/QGridLayout>
 #include <QtGui/QStatusBar>
 #include <QtGui/QRadioButton>
 #include <QtGui/QPushButton>
 #include <QtGui/QCheckBox>
 #include <QtGui/QSlider>
+#include <QtGui/QDoubleSpinBox>
 #include <QtCore/QTimer>
 #include <QtCore/QString>
+#include <QLabel>
 #include <QVTKWidget.h>
 
 #include "camera.h"
@@ -36,13 +39,18 @@ public slots:
 private slots:
     void onTestModeChecked(int state);
     void onViewRadioButtonsChecked(bool checked);
+    void onToggleSettingsMenu();
     
 private:
     void createInterface();
     
     QWidget *centralWidget;
-    QGridLayout *gridLayout, *radioButtonsLayout;
-    QPushButton *exportButton;
+    QGridLayout *gridLayout, *radioButtonsLayout, *paramsLayout;
+    QLabel *maxpqLabel, *lambdaLabel, *muLabel, *spreadNormsLabel;
+    QDoubleSpinBox *maxpqSpinBox, *lambdaSpinBox, *muSpinBox;
+    QSlider *spreadNormSlider;
+    QGroupBox *paramsGroupBox;
+    QPushButton *exportButton, *toggleSettingsButton;
     QRadioButton *normalsRadioButton, *surfaceRadioButton;
     QCheckBox *testModeCheckBox;
     QThread *camThread;

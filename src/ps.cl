@@ -47,7 +47,7 @@ inline float4 getNormalVector(__global float *Sinv, uchar8 I) {
     return normalize(n);
 }
 
-__kernel void calcNormals(__read_only image2d_t img1, __read_only image2d_t img2, __read_only image2d_t img3, __read_only image2d_t img4, __read_only image2d_t img5, __read_only image2d_t img6, __read_only image2d_t img7, __read_only image2d_t img8, int width, int height, __global float *Sinv, __global float *P, __global float *Q, __global float *N) {
+__kernel void calcNormals(__read_only image2d_t img1, __read_only image2d_t img2, __read_only image2d_t img3, __read_only image2d_t img4, __read_only image2d_t img5, __read_only image2d_t img6, __read_only image2d_t img7, __read_only image2d_t img8, int width, int height, __global float *Sinv, __global float *P, __global float *Q, __global float *N, float maxpq, float slope) {
     
     /* get current i,j position in image */
     int i = get_global_id(0);
@@ -57,8 +57,13 @@ __kernel void calcNormals(__read_only image2d_t img1, __read_only image2d_t img2
     uchar8 I = getIntensityVector(i, j, img1, img2, img3, img4, img5, img6, img7, img8);
     float4 n = getNormalVector(Sinv, I);
     
-    /* updated depth gradients from Wei2001 */
-    float maxpq = 4.0f;
+    /* exaggerate slope as in [Malzbender2006] */
+    n.x *= slope;
+    n.y *= slope;
+    n.z = sqrt(1.0f - pow(n.x, 2) - pow(n.y, 2));
+    n = normalize(n);
+    
+    /* updated depth gradients as in [Wei2001] */
     float p = n.x/n.z;
     float q = n.y/n.z;
     if (fabs(p) < maxpq && fabs(q) < maxpq) {
@@ -72,18 +77,16 @@ __kernel void calcNormals(__read_only image2d_t img1, __read_only image2d_t img2
     N[(i*width*3)+(j*3)+(2)] = n.z;
 }
 
-__kernel void integrate(__global float *P, __global float *Q, __global float *Z, int width, int height) {
+__kernel void integrate(__global float *P, __global float *Q, __global float *Z, int width, int height, float lambda, float mu) {
     
     /* get current i,j position in image */
     int i  = get_global_id(0);
     int j  = get_global_id(1);
+    float u = sin((float)(i*2*M_PI_F/height));
+    float v = sin((float)(j*2*M_PI_F/width));
     
-    if ( i != 0 && j != 0) {
-        float lambda = 0.5; float mu = 0.5;
-        float u = sin((float)(i*2*M_PI_F/height));
-        float v = sin((float)(j*2*M_PI_F/width));
+    if ( u != 0 && v != 0) {
         float l = (1.0f + lambda)*(pow(u,2) + pow(v,2)) + mu*pow((pow(u,2)+pow(v,2)),2);
-        
         /* offset = (row * numCols * numChannels) + (col * numChannels) + channel */
         float d1 =  u*P[(i*width*2)+(j*2)+(1)] + v*Q[(i*width*2)+(j*2)+(1)];
         float d2 = -u*P[(i*width*2)+(j*2)+(0)] - v*Q[(i*width*2)+(j*2)+(0)];
