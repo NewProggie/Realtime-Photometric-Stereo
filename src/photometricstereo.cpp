@@ -3,14 +3,14 @@
 PhotometricStereo::PhotometricStereo(int width, int height) : width(width), height(height) {
     
     /* setup pre calibrated global light sources */
-    cv::Mat lightSrcs = (cv::Mat_<float>(8,3) <<    -0.222222222222222222,  0.00740740740740740, 1.00000000000000000,
-                                                    -0.162962962962962980, -0.14074074074074075, 1.00000000000000000,
-                                                     0.037037037037037037, -0.20000000000000000, 1.00000000000000000,
-                                                     0.148148148148148148, -0.14074074074074075, 1.00000000000000000,
-                                                     0.222222222222222222,  0.02962962962962963, 1.00000000000000000,
-                                                     0.133333333333333333,  0.14814814814814814, 1.00000000000000000,
-                                                    -0.022222222222222222,  0.20000000000000000, 1.00000000000000000,
-                                                    -0.155555555555555555,  0.14814814814814814, 1.00000000000000000);
+    cv::Mat lightSrcs = (cv::Mat_<float>(8,3) <<    -0.222222222222222222,  0.00740740740740740, 0.974967904223579,
+                                                    -0.162962962962962980, -0.14074074074074075, 0.9765424294919701,
+                                                     0.037037037037037037, -0.20000000000000000, 0.9790956326567478,
+                                                     0.148148148148148148, -0.14074074074074075, 0.9788994688404024,
+                                                     0.222222222222222222,  0.02962962962962963, 0.9745457244268368,
+                                                     0.133333333333333333,  0.14814814814814814, 0.9799358899553055,
+                                                    -0.022222222222222222,  0.20000000000000000, 0.9795438595792973,
+                                                    -0.155555555555555555,  0.14814814814814814, 0.9766547984503413);
     
     cv::invert(lightSrcs, lightSrcsInv, cv::DECOMP_SVD);
 
@@ -206,7 +206,7 @@ void PhotometricStereo::execute() {
     queue.finish();
 
     /* executing kernel */
-    queue.enqueueNDRangeKernel(calcNormKernel, cl::NullRange, cl::NDRange(height*width), cl::NullRange, NULL, &event);
+    queue.enqueueNDRangeKernel(calcNormKernel, cl::NullRange, cl::NDRange(height, width), cl::NullRange, NULL, &event);
     queue.finish();
 
     /* reading back from CPU device */
@@ -259,7 +259,7 @@ cv::Mat PhotometricStereo::getGlobalHeights(cv::Mat Pgrads, cv::Mat Qgrads) {
     queue.finish();
 
     /* executing kernel */
-    queue.enqueueNDRangeKernel(integKernel, cl::NullRange, cl::NDRange(height*width), cl::NullRange, NULL, &event);
+    queue.enqueueNDRangeKernel(integKernel, cl::NullRange, cl::NDRange(height, width), cl::NullRange, NULL, &event);
 
     /* reading back from CPU */
     queue.enqueueReadBuffer(cl_Z, CL_TRUE, 0, imgSize, Z.data);
