@@ -18,6 +18,8 @@
 #include <vtkFloatArray.h>
 #include <vtkTriangle.h>
 #include <vtkOBJExporter.h>
+#include <vtkSTLWriter.h>
+#include <vtkPLYWriter.h>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -25,6 +27,7 @@
 
 #include <QVTKWidget.h>
 #include <QtGui/QFileDialog>
+#include <QtCore/QFileInfo>
 
 class ModelWidget : public QVTKWidget {
     

@@ -116,10 +116,32 @@ void ModelWidget::renderModel(std::vector<cv::Mat> MatXYZN) {
 
 void ModelWidget::exportModel() {
 
-    QString filename = QFileDialog::getSaveFileName(this, "Export model", "", "Wavefront OBJ (*.obj)");
+    QString filename = QFileDialog::getSaveFileName(this, "Export model", "", "Polygon File Format (*.ply);;Wavefront OBJ (*.obj);;Stereolithography (*.stl)");
+    
+    QFileInfo fi(filename);
+    QString ext = fi.suffix();
+    
+    if (ext.compare("ply") == 0) {
+        vtkSmartPointer<vtkPLYWriter> plyExporter = vtkSmartPointer<vtkPLYWriter>::New();
+        plyExporter->SetInput(polyData);
+        plyExporter->SetFileName(filename.toStdString().c_str());
+        plyExporter->SetColorModeToDefault();
+        plyExporter->SetArrayName("Colors");
+        plyExporter->Update();
+        plyExporter->Write();
+    } else if (ext.compare("obj") == 0) {
+        vtkSmartPointer<vtkOBJExporter> objExporter = vtkSmartPointer<vtkOBJExporter>::New();
+        objExporter->SetInput(renderWindow);
+        objExporter->SetFilePrefix(filename.toStdString().c_str());
+        objExporter->Update();
+        objExporter->Write();
+    } else {
+        vtkSmartPointer<vtkSTLWriter> stlExporter = vtkSmartPointer<vtkSTLWriter>::New();
+        stlExporter->SetInput(polyData);
+        stlExporter->SetFileName(filename.toStdString().c_str());
+        stlExporter->SetFileTypeToBinary();
+        stlExporter->Update();
+        stlExporter->Write();
+    }
 
-    vtkSmartPointer<vtkOBJExporter> modelExporter = vtkSmartPointer<vtkOBJExporter>::New();
-    modelExporter->SetRenderWindow(renderWindow);
-    modelExporter->SetFilePrefix(filename.split(".")[0].toStdString().c_str());
-    modelExporter->Write();
 }

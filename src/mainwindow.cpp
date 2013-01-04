@@ -116,7 +116,7 @@ void MainWindow::createInterface() {
     gridLayout->addWidget(testModeCheckBox, 1, 0);
 
     /* exporting ps images */
-    exportButton = new QPushButton("Export as OBJ", centralWidget);
+    exportButton = new QPushButton("Export 3D Model", centralWidget);
     connect(exportButton, SIGNAL(clicked()), modelWidget, SLOT(exportModel()));
     gridLayout->addWidget(exportButton, 2, 1);
 
