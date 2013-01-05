@@ -77,6 +77,40 @@ __kernel void calcNormals(__read_only image2d_t img1, __read_only image2d_t img2
     N[(i*width*3)+(j*3)+(2)] = n.z;
 }
 
+__kernel void updateNormals(__global float *N, int width, int height, __global float *P, __global float *Q, float scale) {
+
+    /* get current i,j position in image */
+    int i  = get_global_id(0);
+    int j  = get_global_id(1);
+    
+    /* avoid edges */
+    if (i < 1 || j < 1) { return; }
+    if (i == height-1 || j == width-1 ) { return; }
+    
+    /* get average of normal vectors over a 9x9 local patch */
+    float4 nsum = (float4)(0.0f, 0.0f, 0.0f, 0.0f);
+    for(int y = i-1; y <= i+1; y++) {
+        for(int x = j-1; x <= j+1; x++) {
+            nsum.x += N[(y*width*3)+(x*3)+(0)];
+            nsum.y += N[(y*width*3)+(x*3)+(1)];
+            nsum.z += N[(y*width*3)+(x*3)+(2)];
+        }
+    }
+    
+    /* unsharp masking normals [Malzbender2006] */
+    float4 n;
+    n.x = N[(i*width*3)+(j*3)+(0)];
+    n.y = N[(i*width*3)+(j*3)+(1)];
+    n.z = N[(i*width*3)+(j*3)+(2)];
+    n = n + scale * (n - normalize(nsum));
+    if (n.z < 0.0f) {n.z = 0.0f; }
+    
+    /* offset: (row * numCols * numChannels) + (col * numChannels) + (channel) */
+    N[(i*width*3)+(j*3)+(0)] = n.x;
+    N[(i*width*3)+(j*3)+(1)] = n.y;
+    N[(i*width*3)+(j*3)+(2)] = n.z;
+}
+
 __kernel void integrate(__global float *P, __global float *Q, __global float *Z, int width, int height, float lambda, float mu) {
     
     /* get current i,j position in image */

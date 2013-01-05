@@ -46,9 +46,9 @@ private:
     
     QWidget *centralWidget;
     QGridLayout *gridLayout, *radioButtonsLayout, *paramsLayout;
-    QLabel *maxpqLabel, *lambdaLabel, *muLabel, *spreadNormsLabel;
+    QLabel *maxpqLabel, *lambdaLabel, *muLabel, *spreadNormsLabel, *unsharpNormsLabel;
     QDoubleSpinBox *maxpqSpinBox, *lambdaSpinBox, *muSpinBox;
-    QSlider *spreadNormSlider;
+    QSlider *spreadNormSlider, *unsharpNormSlider;
     QGroupBox *paramsGroupBox;
     QPushButton *exportButton, *toggleSettingsButton;
     QRadioButton *normalsRadioButton, *surfaceRadioButton;

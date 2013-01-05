@@ -29,6 +29,7 @@ PhotometricStereo::PhotometricStereo(int width, int height) : width(width), heig
     lambda = 0.5f;
     mu = 0.5f;
     slope = 1.0f;
+    unsharpScaleFactor = 1.0f;
 
     /* counter indicating current active LED */
     imgIdx = START_LED;
@@ -72,6 +73,7 @@ PhotometricStereo::PhotometricStereo(int width, int height) : width(width), heig
     /* initialize kernels from program */
     calcNormKernel = cl::Kernel(program, "calcNormals", &error);
     integKernel = cl::Kernel(program, "integrate", &error);
+    updateNormKernel = cl::Kernel(program, "updateNormals", &error);
 
 }
 
@@ -113,6 +115,14 @@ void PhotometricStereo::setSlope(int val) {
 
 float PhotometricStereo::getSlope() {
     return slope;
+}
+
+void PhotometricStereo::setUnsharpScale(int val) {
+    unsharpScaleFactor = (float) (val/100.0f);
+}
+
+float PhotometricStereo::getUnsharpScale() {
+    return unsharpScaleFactor;
 }
 
 cv::Mat PhotometricStereo::readCalibratedLights() {
@@ -202,7 +212,7 @@ void PhotometricStereo::execute() {
     cl_N = cl::Buffer(context, CL_MEM_WRITE_ONLY, imgSize3, NULL, &error);
 
     /* pushing data to CPU */
-    cv::Mat N(height, width, CV_32FC3, cv::Scalar::all(0));
+    cv::Mat Normals(height, width, CV_32FC3, cv::Scalar::all(0));
     cv::Mat Pgrads(height, width, CV_32F, cv::Scalar::all(0));
     cv::Mat Qgrads(height, width, CV_32F, cv::Scalar::all(0));
 
@@ -222,7 +232,7 @@ void PhotometricStereo::execute() {
     queue.enqueueWriteBuffer(cl_Sinv, CL_TRUE, 0, sSize, lightSrcsInv.data, NULL, &event);
     queue.enqueueWriteBuffer(cl_Pgrads, CL_TRUE, 0, gradSize, Pgrads.data, NULL, &event);
     queue.enqueueWriteBuffer(cl_Qgrads, CL_TRUE, 0, gradSize, Qgrads.data, NULL, &event);
-    queue.enqueueWriteBuffer(cl_N, CL_TRUE, 0, imgSize3, N.data, NULL, &event);
+    queue.enqueueWriteBuffer(cl_N, CL_TRUE, 0, imgSize3, Normals.data, NULL, &event);
 
     /* set kernel arguments */
     calcNormKernel.setArg(0, cl_img1); // 1-8 images
@@ -252,17 +262,41 @@ void PhotometricStereo::execute() {
     /* reading back from CPU device */
     queue.enqueueReadBuffer(cl_Pgrads, CL_TRUE, 0, gradSize, Pgrads.data);
     queue.enqueueReadBuffer(cl_Qgrads, CL_TRUE, 0, gradSize, Qgrads.data);
-    queue.enqueueReadBuffer(cl_N, CL_TRUE, 0, sizeof(float) * (height*width*3), N.data);
+    queue.enqueueReadBuffer(cl_N, CL_TRUE, 0, sizeof(float) * (height*width*3), Normals.data);
 
     /* integrate and get heights globally */
     cv::Mat Zcoords = getGlobalHeights(Pgrads, Qgrads);
+    
+    /* pushing normals to CPU again */
+    cl_N = cl::Buffer(context, CL_MEM_READ_WRITE, imgSize3, NULL, &error);
+    queue.enqueueWriteBuffer(cl_N, CL_TRUE, 0, imgSize3, Normals.data);
+    
+    /*  unsharp masking as in [Malzbender2006] */
+    updateNormKernel.setArg(0, cl_N);
+    updateNormKernel.setArg(1, width);
+    updateNormKernel.setArg(2, height);
+    updateNormKernel.setArg(3, cl_Pgrads);
+    updateNormKernel.setArg(4, cl_Qgrads);
+    updateNormKernel.setArg(5, unsharpScaleFactor);
+    
+    /* executing kernel updating normals */
+    queue.enqueueNDRangeKernel(updateNormKernel, cl::NullRange, cl::NDRange(height, width), cl::NullRange, NULL, &event);
+    queue.finish();
+    
+    /* reading back from CPU device */
+    queue.enqueueReadBuffer(cl_Pgrads, CL_TRUE, 0, gradSize, Pgrads.data);
+    queue.enqueueReadBuffer(cl_Qgrads, CL_TRUE, 0, gradSize, Qgrads.data);
+    queue.enqueueReadBuffer(cl_N, CL_TRUE, 0, imgSize3, Normals.data);
+    
+    /* integrate updated gradients second time */
+    Zcoords = getGlobalHeights(Pgrads, Qgrads);
 
     /* store 3d data and normals tensor-like */
     std::vector<cv::Mat> matVec;
     matVec.push_back(XCoords);
     matVec.push_back(YCoords);
     matVec.push_back(Zcoords);
-    matVec.push_back(N);
+    matVec.push_back(Normals);
 
     emit executionTime("Elapsed time: " + QString::number(getMilliSecs() - start) + " ms.");
     emit modelFinished(matVec);

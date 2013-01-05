@@ -164,6 +164,14 @@ void MainWindow::createInterface() {
     paramsLayout->addWidget(spreadNormsLabel, 3, 0);
     paramsLayout->addWidget(spreadNormSlider, 3, 1);
     
+    unsharpNormsLabel = new QLabel("Unsharp masking normals", paramsGroupBox);
+    unsharpNormSlider = new QSlider(Qt::Horizontal, paramsGroupBox);
+    unsharpNormSlider->setRange(1, 300);
+    unsharpNormSlider->setValue((int)ps->getUnsharpScale()*100);
+    connect(unsharpNormSlider, SIGNAL(valueChanged(int)), ps, SLOT(setUnsharpScale(int)));
+    paramsLayout->addWidget(unsharpNormsLabel, 4, 0);
+    paramsLayout->addWidget(unsharpNormSlider, 4, 1);
+    
     paramsGroupBox->setLayout(paramsLayout);
     paramsGroupBox->hide();
     gridLayout->addWidget(paramsGroupBox, 3, 0);

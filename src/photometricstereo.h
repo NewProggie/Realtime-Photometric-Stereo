@@ -31,6 +31,7 @@ public:
     float getLambda();
     float getMu();
     float getSlope();
+    float getUnsharpScale();
     
 public slots:
     void setImage(cv::Mat image);
@@ -38,6 +39,7 @@ public slots:
     void setLambda(double val);
     void setMu(double val);
     void setSlope(int val);
+    void setUnsharpScale(int val);
     
 signals:
     void executionTime(QString timeMillis);
@@ -49,7 +51,7 @@ private:
     cl::Program program;
     cl::Context context;
     cl::CommandQueue queue;
-    cl::Kernel calcNormKernel, integKernel;
+    cl::Kernel calcNormKernel, integKernel, updateNormKernel;
     
     /* opencl buffer */
     cl::Image2D cl_img1, cl_img2, cl_img3, cl_img4, cl_img5, cl_img6, cl_img7, cl_img8;
@@ -67,6 +69,7 @@ private:
     float maxpq;
     float lambda, mu;
     float slope;
+    float unsharpScaleFactor;
     
     /* ps images */
     std::vector<cv::Mat> psImages;
