@@ -127,8 +127,8 @@ void MainWindow::createInterface() {
     gridLayout->addWidget(exportButton, 2, 1);
 
     /* add settings to adjust ps parameter and export 3d model */
-    paramsGroupBox = new QGroupBox("Adjust parameter");
-    paramsLayout = new QGridLayout();
+    paramsGroupBox = new QGroupBox("PS parameters", centralWidget);
+    paramsLayout = new QGridLayout(paramsGroupBox);
     
     maxpqLabel = new QLabel("max<sub>pq</sub>", paramsGroupBox);
     maxpqSpinBox = new QDoubleSpinBox(paramsGroupBox);
@@ -176,6 +176,25 @@ void MainWindow::createInterface() {
     paramsGroupBox->hide();
     gridLayout->addWidget(paramsGroupBox, 3, 0);
     
+    /* add radio buttons to switch between integration methods */
+    integMethodGroupBox = new QGroupBox("Integration method", centralWidget);
+    integMethodRadBtnsLayout = new QHBoxLayout(integMethodGroupBox);
+    
+    frankChellapRadioButton = new QRadioButton("Frankot-Chelappa", integMethodGroupBox);
+    connect(frankChellapRadioButton, SIGNAL(pressed()), ps, SLOT(setFrankoChellappaInteg()));
+    weiKletteRadioButton = new QRadioButton("Wei-Klette", integMethodGroupBox);
+    connect(weiKletteRadioButton, SIGNAL(pressed()), ps, SLOT(setWeiKletteInteg()));
+    frankChellapRadioButton->setChecked(ps->getIntegrationMethod() == ps::FRANKOT_CHELLAPPA_INTEG);
+    weiKletteRadioButton->setChecked(ps->getIntegrationMethod() == ps::WEI_KLETTE_INTEG);
+    
+    integMethodRadBtnsLayout->addWidget(frankChellapRadioButton);
+    integMethodRadBtnsLayout->addWidget(weiKletteRadioButton);
+    
+    integMethodGroupBox->setLayout(integMethodRadBtnsLayout);
+    integMethodGroupBox->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+    integMethodGroupBox->hide();
+    gridLayout->addWidget(integMethodGroupBox, 3, 1, Qt::AlignTop);
+    
     setCentralWidget(centralWidget);
 }
 
@@ -183,6 +202,7 @@ void MainWindow::onToggleSettingsMenu() {
     
     toggleSettingsButton->setText(QString("%1 settings menu").arg(toggleSettingsButton->isChecked() ? "Hide": "Show"));
     paramsGroupBox->setVisible(toggleSettingsButton->isChecked());
+    integMethodGroupBox->setVisible(toggleSettingsButton->isChecked());
 }
 
 void MainWindow::onTestModeChecked(int state) {

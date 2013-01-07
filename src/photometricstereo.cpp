@@ -30,6 +30,7 @@ PhotometricStereo::PhotometricStereo(int width, int height) : width(width), heig
     mu = 0.5f;
     slope = 1.0f;
     unsharpScaleFactor = 1.0f;
+    integrationMethod = ps::WEI_KLETTE_INTEG;
 
     /* counter indicating current active LED */
     imgIdx = START_LED;
@@ -123,6 +124,18 @@ void PhotometricStereo::setUnsharpScale(int val) {
 
 float PhotometricStereo::getUnsharpScale() {
     return unsharpScaleFactor;
+}
+
+void PhotometricStereo::setFrankoChellappaInteg() {
+    integrationMethod = ps::FRANKOT_CHELLAPPA_INTEG;
+}
+
+void PhotometricStereo::setWeiKletteInteg() {
+    integrationMethod = ps::WEI_KLETTE_INTEG;
+}
+
+int PhotometricStereo::getIntegrationMethod() {
+    return integrationMethod;
 }
 
 cv::Mat PhotometricStereo::readCalibratedLights() {
@@ -330,6 +343,7 @@ cv::Mat PhotometricStereo::getGlobalHeights(cv::Mat Pgrads, cv::Mat Qgrads) {
     integKernel.setArg(4, height);
     integKernel.setArg(5, lambda);
     integKernel.setArg(6, mu);
+    integKernel.setArg(7, integrationMethod);
 
     /* wait for command queue to finish before continuing */
     queue.finish();

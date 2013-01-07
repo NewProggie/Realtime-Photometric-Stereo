@@ -8,6 +8,7 @@
 #include <QtGui/QMenu>
 #include <QtGui/QGroupBox>
 #include <QtGui/QGridLayout>
+#include <QtGui/QHBoxLayout>
 #include <QtGui/QStatusBar>
 #include <QtGui/QRadioButton>
 #include <QtGui/QPushButton>
@@ -17,6 +18,7 @@
 #include <QtCore/QTimer>
 #include <QtCore/QString>
 #include <QLabel>
+#include <QSizePolicy>
 #include <QVTKWidget.h>
 
 #include "camera.h"
@@ -46,12 +48,13 @@ private:
     
     QWidget *centralWidget;
     QGridLayout *gridLayout, *radioButtonsLayout, *paramsLayout;
+    QHBoxLayout *integMethodRadBtnsLayout;
     QLabel *maxpqLabel, *lambdaLabel, *muLabel, *spreadNormsLabel, *unsharpNormsLabel;
     QDoubleSpinBox *maxpqSpinBox, *lambdaSpinBox, *muSpinBox;
     QSlider *spreadNormSlider, *unsharpNormSlider;
-    QGroupBox *paramsGroupBox;
+    QGroupBox *paramsGroupBox, *integMethodGroupBox;
     QPushButton *exportButton, *toggleSettingsButton;
-    QRadioButton *normalsRadioButton, *surfaceRadioButton;
+    QRadioButton *normalsRadioButton, *surfaceRadioButton, *frankChellapRadioButton, *weiKletteRadioButton;
     QCheckBox *testModeCheckBox;
     QThread *camThread;
     
