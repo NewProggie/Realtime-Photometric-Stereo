@@ -297,21 +297,24 @@ void Camera::captureFrame() {
         dc1394_capture_enqueue(camera, frame);
     }
     
-    /* remove ambient light */
-    distortedFrame -= ambientImage;
-    
     /* undistort camera image */
     cv::Mat camFrame(camFrameHeight, camFrameWidth, CV_8UC1);
     undistortLUT(distortedFrame, camFrame);
     
-    /* cropping image in center to power-of-2 size */
+    /* display original frame with ambient light in camera widget */
     cv::Rect cropped((camFrame.cols-width)/2, (camFrame.rows-height)/2, width, height);
-    camFrame = camFrame(cropped).clone();
+    emit newCamFrame(camFrame(cropped).clone());
+    
+    /* remove ambient light */
+    camFrame /= ambientImage;
+    
+    /* cropping image in center to power-of-2 size */
+    cv::Mat croppedFrame = camFrame(cropped).clone();
 
     /* assigning image id (current active LED) to pixel in 0,0 */
-    camFrame.at<uchar>(0, 0) = imgIdx;
+    croppedFrame.at<uchar>(0, 0) = imgIdx;
     
-    emit newFrame(camFrame);
+    emit newCroppedFrame(croppedFrame);
 }
 
 uint32_t Camera::readRegisterContent(uint64_t offset) {

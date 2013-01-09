@@ -52,7 +52,8 @@ private slots:
     void captureFrame();
 
 signals:
-    void newFrame(cv::Mat frame);
+    void newCamFrame(cv::Mat frame);
+    void newCroppedFrame(cv::Mat frame);
     void stopped();
 
 private:

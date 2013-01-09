@@ -36,9 +36,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     connect(camThread, SIGNAL(finished()), camThread, SLOT(deleteLater()));
     
     /* connecting camera with camerawidget and ps process */
-    connect(camera, SIGNAL(newFrame(cv::Mat)), camWidget, SLOT(setImage(cv::Mat)), Qt::AutoConnection);
+    connect(camera, SIGNAL(newCamFrame(cv::Mat)), camWidget, SLOT(setImage(cv::Mat)), Qt::AutoConnection);
     /* invoking ps setImage slot immediately, when the signal is emitted to ensure image order */
-    connect(camera, SIGNAL(newFrame(cv::Mat)), ps, SLOT(setImage(cv::Mat)), Qt::DirectConnection);
+    connect(camera, SIGNAL(newCroppedFrame(cv::Mat)), ps, SLOT(setImage(cv::Mat)), Qt::DirectConnection);
     
     /* connecting ps process with mainwindow and modelwidget */
     connect(ps, SIGNAL(executionTime(QString)), this, SLOT(setStatusMessage(QString)), Qt::AutoConnection);
@@ -132,7 +132,7 @@ void MainWindow::createInterface() {
     
     maxpqLabel = new QLabel("max<sub>pq</sub>", paramsGroupBox);
     maxpqSpinBox = new QDoubleSpinBox(paramsGroupBox);
-    maxpqSpinBox->setRange(0, 100);
+    maxpqSpinBox->setRange(0, 200);
     maxpqSpinBox->setValue(ps->getMaxPQ());
     connect(maxpqSpinBox, SIGNAL(valueChanged(double)), ps, SLOT(setMaxPQ(double)));
     paramsLayout->addWidget(maxpqLabel, 0, 0);
@@ -140,7 +140,7 @@ void MainWindow::createInterface() {
     
     lambdaLabel = new QLabel("<html><body>&lambda;<body></html>", paramsGroupBox);
     lambdaSpinBox = new QDoubleSpinBox(paramsGroupBox);
-    lambdaSpinBox->setRange(0, 1);
+    lambdaSpinBox->setRange(0, 10);
     lambdaSpinBox->setSingleStep(0.1);
     lambdaSpinBox->setValue(ps->getLambda());
     connect(lambdaSpinBox, SIGNAL(valueChanged(double)), ps, SLOT(setLambda(double)));
@@ -149,7 +149,7 @@ void MainWindow::createInterface() {
     
     muLabel = new QLabel("<html><body>&mu;<body></html>", paramsGroupBox);
     muSpinBox = new QDoubleSpinBox(paramsGroupBox);
-    muSpinBox->setRange(0, 1);
+    muSpinBox->setRange(0, 10);
     muSpinBox->setSingleStep(0.1);
     muSpinBox->setValue(ps->getMu());
     connect(muSpinBox, SIGNAL(valueChanged(double)), ps, SLOT(setMu(double)));
@@ -176,25 +176,6 @@ void MainWindow::createInterface() {
     paramsGroupBox->hide();
     gridLayout->addWidget(paramsGroupBox, 3, 0);
     
-    /* add radio buttons to switch between integration methods */
-    integMethodGroupBox = new QGroupBox("Integration method", centralWidget);
-    integMethodRadBtnsLayout = new QHBoxLayout(integMethodGroupBox);
-    
-    frankChellapRadioButton = new QRadioButton("Frankot-Chelappa", integMethodGroupBox);
-    connect(frankChellapRadioButton, SIGNAL(pressed()), ps, SLOT(setFrankoChellappaInteg()));
-    weiKletteRadioButton = new QRadioButton("Wei-Klette", integMethodGroupBox);
-    connect(weiKletteRadioButton, SIGNAL(pressed()), ps, SLOT(setWeiKletteInteg()));
-    frankChellapRadioButton->setChecked(ps->getIntegrationMethod() == ps::FRANKOT_CHELLAPPA_INTEG);
-    weiKletteRadioButton->setChecked(ps->getIntegrationMethod() == ps::WEI_KLETTE_INTEG);
-    
-    integMethodRadBtnsLayout->addWidget(frankChellapRadioButton);
-    integMethodRadBtnsLayout->addWidget(weiKletteRadioButton);
-    
-    integMethodGroupBox->setLayout(integMethodRadBtnsLayout);
-    integMethodGroupBox->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
-    integMethodGroupBox->hide();
-    gridLayout->addWidget(integMethodGroupBox, 3, 1, Qt::AlignTop);
-    
     setCentralWidget(centralWidget);
 }
 
@@ -202,7 +183,6 @@ void MainWindow::onToggleSettingsMenu() {
     
     toggleSettingsButton->setText(QString("%1 settings menu").arg(toggleSettingsButton->isChecked() ? "Hide": "Show"));
     paramsGroupBox->setVisible(toggleSettingsButton->isChecked());
-    integMethodGroupBox->setVisible(toggleSettingsButton->isChecked());
 }
 
 void MainWindow::onTestModeChecked(int state) {

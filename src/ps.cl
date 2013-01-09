@@ -1,9 +1,6 @@
 
 __constant sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
 
-__constant int FRANKOT_CHELLAPPA_INTEG = 1;
-__constant int WEI_KLETTE_INTEG = 2;
-
 inline uchar8 getIntensityVector(int i, int j, image2d_t img1, image2d_t img2, image2d_t img3, image2d_t img4, image2d_t img5, image2d_t img6, image2d_t img7, image2d_t img8) {
     
     uchar8 I;
@@ -20,7 +17,7 @@ inline uchar8 getIntensityVector(int i, int j, image2d_t img1, image2d_t img2, i
 
 inline float4 getNormalVector(__global float *Sinv, uchar8 I) {
     
-    float4 n;
+    float4 n = (float4)(0.0f, 0.0f, 0.0f, 0.0f);
     n.x =   (Sinv[8*0+0]*I.s0)+
             (Sinv[8*0+1]*I.s1)+
             (Sinv[8*0+2]*I.s2)+
@@ -47,6 +44,11 @@ inline float4 getNormalVector(__global float *Sinv, uchar8 I) {
             (Sinv[8*2+5]*I.s5)+
             (Sinv[8*2+6]*I.s6)+
             (Sinv[8*2+7]*I.s7);
+    
+    /* surface albedo */
+    float p = length(n);
+    if (p > 0.0f) { n /= p; }
+    if (n.z <= 0.0f) { n.z = 1.0f; }
     return normalize(n);
 }
 
@@ -64,7 +66,7 @@ __kernel void calcNormals(__read_only image2d_t img1, __read_only image2d_t img2
     n.x *= slope;
     n.y *= slope;
     n.z = sqrt(1.0f - pow(n.x, 2) - pow(n.y, 2));
-    if (n.z < 0.0f) {n.z = 0.0f; }
+    if (n.z < 0.0f) { n.z = 0.0f; }
     n = normalize(n);
     
     /* updated depth gradients as in [Wei2001] */
@@ -115,26 +117,21 @@ __kernel void updateNormals(__global float *N, int width, int height, __global f
     N[(i*width*3)+(j*3)+(2)] = n.z;
 }
 
-__kernel void integrate(__global float *P, __global float *Q, __global float *Z, int width, int height, float lambda, float mu, int integ) {
+__kernel void integrate(__global float *P, __global float *Q, __global float *Z, int width, int height, float lambda, float mu) {
     
     /* get current i,j position in image */
     int i  = get_global_id(0);
     int j  = get_global_id(1);
-    float u = sin((float)(i*2*M_PI_F/height));
-    float v = sin((float)(j*2*M_PI_F/width));
-    float z1 = 0.0f, z2 = 0.0f;
     
-    if (integ == FRANKOT_CHELLAPPA_INTEG && (i != 0 || j != 0)) {
-        float uv = u*u + v*v;
-        float d = uv;
-        z1 = (u*P[(i*width*2)+(j*2)+(1)]  + v*Q[(i*width*2)+(j*2)+(1)]) / d;
-        z2 = (-u*P[(i*width*2)+(j*2)+(0)] - v*Q[(i*width*2)+(j*2)+(0)]) / d;
-    } else if (integ == WEI_KLETTE_INTEG && (u != 0 && v != 0)) {
-        float l = (1.0f + lambda)*(pow(u,2) + pow(v,2)) + mu*pow((pow(u,2)+pow(v,2)),2);
-        z1 = u*P[(i*width*2)+(j*2)+(1)] + v*Q[(i*width*2)+(j*2)+(1)] / l;
-        z2 = -u*P[(i*width*2)+(j*2)+(0)] - v*Q[(i*width*2)+(j*2)+(0)] / l;
+    if ((i != 0) || (j != 0)) {
+        float u = sin((float)(i*2*M_PI_F/height));
+        float v = sin((float)(j*2*M_PI_F/width));
+        float uv = pow(u,2)+pow(v,2);
+        float d = (1.0f + lambda)*uv + mu*pow(uv,2);
+        /* offset = (row * numCols * numChannels) + (col * numChannels) + channel */
+        Z[(i*width*2)+(j*2)+(0)] = (u*P[(i*width*2)+(j*2)+(1)]  + v*Q[(i*width*2)+(j*2)+(1)]) / d;
+        Z[(i*width*2)+(j*2)+(1)] = (-u*P[(i*width*2)+(j*2)+(0)] - v*Q[(i*width*2)+(j*2)+(0)]) / d;
     }
-    /* offset = (row * numCols * numChannels) + (col * numChannels) + channel */
-    Z[(i*width*2)+(j*2)+(0)] = z1;
-    Z[(i*width*2)+(j*2)+(1)] = z2;
+    
+    
 }

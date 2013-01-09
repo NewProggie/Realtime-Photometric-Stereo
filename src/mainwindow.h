@@ -48,13 +48,12 @@ private:
     
     QWidget *centralWidget;
     QGridLayout *gridLayout, *radioButtonsLayout, *paramsLayout;
-    QHBoxLayout *integMethodRadBtnsLayout;
     QLabel *maxpqLabel, *lambdaLabel, *muLabel, *spreadNormsLabel, *unsharpNormsLabel;
     QDoubleSpinBox *maxpqSpinBox, *lambdaSpinBox, *muSpinBox;
     QSlider *spreadNormSlider, *unsharpNormSlider;
-    QGroupBox *paramsGroupBox, *integMethodGroupBox;
+    QGroupBox *paramsGroupBox;
     QPushButton *exportButton, *toggleSettingsButton;
-    QRadioButton *normalsRadioButton, *surfaceRadioButton, *frankChellapRadioButton, *weiKletteRadioButton;
+    QRadioButton *normalsRadioButton, *surfaceRadioButton;
     QCheckBox *testModeCheckBox;
     QThread *camThread;
     

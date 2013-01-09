@@ -19,11 +19,6 @@
 #include "oclutils.h"
 #include "config.h"
 
-namespace ps {
-    const int FRANKOT_CHELLAPPA_INTEG = 1;
-    const int WEI_KLETTE_INTEG = 2;
-}
-
 class PhotometricStereo : public QObject {
 
     Q_OBJECT
@@ -37,7 +32,6 @@ public:
     float getMu();
     float getSlope();
     float getUnsharpScale();
-    int getIntegrationMethod();
     
 public slots:
     void setImage(cv::Mat image);
@@ -46,8 +40,6 @@ public slots:
     void setMu(double val);
     void setSlope(int val);
     void setUnsharpScale(int val);
-    void setFrankoChellappaInteg();
-    void setWeiKletteInteg();
     
 signals:
     void executionTime(QString timeMillis);
@@ -78,7 +70,6 @@ private:
     float lambda, mu;
     float slope;
     float unsharpScaleFactor;
-    int integrationMethod;
     
     /* ps images */
     std::vector<cv::Mat> psImages;
