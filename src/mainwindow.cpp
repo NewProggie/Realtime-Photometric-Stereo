@@ -22,7 +22,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     camera->moveToThread(camThread);
         
     /* creating photometric stereo process */
-    ps = new PhotometricStereo(camera->width, camera->height);
+    ps = new PhotometricStereo(camera->width, camera->height, camera->avgImageIntensity());
 
     /* setup ui */
     setWindowTitle("Realtime Photometric-Stereo");
@@ -156,17 +156,17 @@ void MainWindow::createInterface() {
     paramsLayout->addWidget(muLabel, 2, 0);
     paramsLayout->addWidget(muSpinBox, 2, 1);
     
-    spreadNormsLabel = new QLabel("Spread surface normals", paramsGroupBox);
-    spreadNormSlider = new QSlider(Qt::Horizontal, paramsGroupBox);
-    spreadNormSlider->setRange(1, 100);
-    spreadNormSlider->setValue((int)ps->getSlope());
-    connect(spreadNormSlider, SIGNAL(valueChanged(int)), ps, SLOT(setSlope(int)));
-    paramsLayout->addWidget(spreadNormsLabel, 3, 0);
-    paramsLayout->addWidget(spreadNormSlider, 3, 1);
+    minIntensLabel = new QLabel("Set min intensity", paramsGroupBox);
+    minIntensSlider = new QSlider(Qt::Horizontal, paramsGroupBox);
+    minIntensSlider->setRange(1, 255);
+    minIntensSlider->setValue(ps->getMinIntensity());
+    connect(minIntensSlider, SIGNAL(valueChanged(int)), ps, SLOT(setMinIntensity(int)));
+    paramsLayout->addWidget(minIntensLabel, 3, 0);
+    paramsLayout->addWidget(minIntensSlider, 3, 1);
     
     unsharpNormsLabel = new QLabel("Unsharp masking normals", paramsGroupBox);
     unsharpNormSlider = new QSlider(Qt::Horizontal, paramsGroupBox);
-    unsharpNormSlider->setRange(1, 300);
+    unsharpNormSlider->setRange(0, 300);
     unsharpNormSlider->setValue((int)ps->getUnsharpScale()*100);
     connect(unsharpNormSlider, SIGNAL(valueChanged(int)), ps, SLOT(setUnsharpScale(int)));
     paramsLayout->addWidget(unsharpNormsLabel, 4, 0);

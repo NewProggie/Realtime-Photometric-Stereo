@@ -52,7 +52,7 @@ inline float4 getNormalVector(__global float *Sinv, uchar8 I) {
     return normalize(n);
 }
 
-__kernel void calcNormals(__read_only image2d_t img1, __read_only image2d_t img2, __read_only image2d_t img3, __read_only image2d_t img4, __read_only image2d_t img5, __read_only image2d_t img6, __read_only image2d_t img7, __read_only image2d_t img8, int width, int height, __global float *Sinv, __global float *P, __global float *Q, __global float *N, float maxpq, float slope) {
+__kernel void calcNormals(__read_only image2d_t img1, __read_only image2d_t img2, __read_only image2d_t img3, __read_only image2d_t img4, __read_only image2d_t img5, __read_only image2d_t img6, __read_only image2d_t img7, __read_only image2d_t img8, int width, int height, __global float *Sinv, __global float *P, __global float *Q, __global float *N, float maxpq, int mini) {
     
     /* get current i,j position in image */
     int i = get_global_id(0);
@@ -62,19 +62,23 @@ __kernel void calcNormals(__read_only image2d_t img1, __read_only image2d_t img2
     uchar8 I = getIntensityVector(i, j, img1, img2, img3, img4, img5, img6, img7, img8);
     float4 n = getNormalVector(Sinv, I);
     
-    /* exaggerate slope as in [Malzbender2006] */
-    n.x *= slope;
-    n.y *= slope;
-    n.z = sqrt(1.0f - pow(n.x, 2) - pow(n.y, 2));
-    if (n.z < 0.0f) { n.z = 0.0f; }
-    n = normalize(n);
+    /* clamp intensitiy */
     
     /* updated depth gradients as in [Wei2001] */
     float p = n.x/n.z;
     float q = n.y/n.z;
     if (fabs(p) < maxpq && fabs(q) < maxpq) {
-        P[(i*width*1)+(j*1)+(0)] = p;
-        Q[(i*width*1)+(j*1)+(0)] = q;
+        if( I.s0 >= mini && I.s1 >= mini && I.s2 >= mini && I.s3 >= mini && I.s4 >= mini && I.s5 >= mini && I.s6 >= mini && I.s7 >= mini) {
+            P[(i*width*1)+(j*1)+(0)] = p;
+            Q[(i*width*1)+(j*1)+(0)] = q;
+        } else {
+            P[(i*width*1)+(j*1)+(0)] = 0.0f;
+            Q[(i*width*1)+(j*1)+(0)] = 0.0f;
+            n.x = 0.0f;
+            n.y = 0.0f;
+            n.z = 1.0f;
+        }
+        
     }
     
     /* offset: (row * numCols * numChannels) + (col * numChannels) + (channel) */
@@ -110,6 +114,7 @@ __kernel void updateNormals(__global float *N, int width, int height, __global f
     n.z = N[(i*width*3)+(j*3)+(2)];
     n = n + scale * (n - normalize(nsum));
     if (n.z < 0.0f) {n.z = 0.0f; }
+    normalize(n);
     
     /* offset: (row * numCols * numChannels) + (col * numChannels) + (channel) */
     N[(i*width*3)+(j*3)+(0)] = n.x;

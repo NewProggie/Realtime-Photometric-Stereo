@@ -42,6 +42,7 @@ public:
     void reset();
     void setTestMode(bool toggle);
     void printStatus();
+    int avgImageIntensity();
     bool inTestMode();
     int height, width;
     
@@ -69,6 +70,7 @@ private:
     cv::Mat ambientImage;
     bool testMode;
     int imgIdx;
+    int avgImgIntensity;
     int FRAME_RATE;
     int camFrameWidth, camFrameHeight;
     

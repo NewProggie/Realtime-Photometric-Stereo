@@ -1,16 +1,16 @@
 #include "photometricstereo.h"
 
-PhotometricStereo::PhotometricStereo(int width, int height) : width(width), height(height) {
+PhotometricStereo::PhotometricStereo(int width, int height, int imageIntensity) : width(width), height(height), minIntensity(imageIntensity) {
     
     /* setup pre calibrated global light sources */
-    cv::Mat lightSrcs = (cv::Mat_<float>(8,3) <<    -0.222222222222222222,  0.00740740740740740, 0.974967904223579,
-                                                    -0.162962962962962980, -0.14074074074074075, 0.9765424294919701,
-                                                     0.037037037037037037, -0.20000000000000000, 0.9790956326567478,
-                                                     0.148148148148148148, -0.14074074074074075, 0.9788994688404024,
-                                                     0.222222222222222222,  0.02962962962962963, 0.9745457244268368,
-                                                     0.133333333333333333,  0.14814814814814814, 0.9799358899553055,
-                                                    -0.022222222222222222,  0.20000000000000000, 0.9795438595792973,
-                                                    -0.155555555555555555,  0.14814814814814814, 0.9766547984503413);
+    cv::Mat lightSrcs = (cv::Mat_<float>(8,3) <<    -0.2222,  0.0074, 0.9749,
+                                                    -0.1629, -0.1407, 0.9765,
+                                                     0.0370, -0.2000, 0.9790,
+                                                     0.1481, -0.1407, 0.9789,
+                                                     0.2222,  0.0296, 0.9745,
+                                                     0.1333,  0.1481, 0.9799,
+                                                    -0.0222,  0.2000, 0.9795,
+                                                    -0.1555,  0.1481, 0.9766);
     
     cv::invert(lightSrcs, lightSrcsInv, cv::DECOMP_SVD);
 
@@ -25,11 +25,10 @@ PhotometricStereo::PhotometricStereo(int width, int height) : width(width), heig
     }
     
     /* adjustable ps parameters */
-    maxpq = 4.0f;
-    lambda = 0.5f;
-    mu = 0.5f;
-    slope = 1.0f;
-    unsharpScaleFactor = 1.0f;
+    maxpq = 10.0f;
+    lambda = 0.4f;
+    mu = 0.4f;
+    unsharpScaleFactor = 0.0f;
 
     /* counter indicating current active LED */
     imgIdx = START_LED;
@@ -109,12 +108,12 @@ float PhotometricStereo::getMu() {
     return mu;
 }
 
-void PhotometricStereo::setSlope(int val) {
-    slope = (float)(val/100.0f)+1.0f;
+void PhotometricStereo::setMinIntensity(int val) {
+    minIntensity = val;
 }
 
-float PhotometricStereo::getSlope() {
-    return slope;
+float PhotometricStereo::getMinIntensity() {
+    return minIntensity;
 }
 
 void PhotometricStereo::setUnsharpScale(int val) {
@@ -250,7 +249,7 @@ void PhotometricStereo::execute() {
     calcNormKernel.setArg(12, cl_Qgrads); // Q gradients
     calcNormKernel.setArg(13, cl_N); // normals for each point
     calcNormKernel.setArg(14, maxpq); // max depth gradients as in [Wei2001]
-    calcNormKernel.setArg(15, slope); // exaggerate slope as in [Malzbender2006]
+    calcNormKernel.setArg(15, minIntensity); // exaggerate slope as in [Malzbender2006]
 
     /* wait for command queue to finish before continuing */
     queue.finish();

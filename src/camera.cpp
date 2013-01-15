@@ -40,10 +40,12 @@ Camera::Camera() {
     std::stringstream s;
     s << PATH_ASSETS << "hand/image_ambient.png";
     ambientImage = cv::imread(s.str(), CV_LOAD_IMAGE_GRAYSCALE);
+    avgImgIntensity = cv::mean(ambientImage)[0];
     for (int i=0; i<8; i++) {
         std::stringstream s;
         s << PATH_ASSETS << "hand/image" << i << ".png";
         cv::Mat img = cv::imread(s.str(), CV_LOAD_IMAGE_GRAYSCALE);
+        cv::GaussianBlur(img, img, cv::Size(3,3), 1.2);
         testImages.push_back(img);
     }
 
@@ -137,6 +139,9 @@ bool Camera::open(int deviceIdx) {
     
     /* capture image with no LEDs to subtract ambient light */
     captureAmbientImage();
+    
+    /* set average image intensity used by ps process for adjustment */
+    avgImgIntensity = cv::mean(ambientImage)[0];
 
     return true;
 }
@@ -162,11 +167,18 @@ void Camera::stop() {
 }
 
 void Camera::setTestMode(bool toggle) {
+    
     testMode = toggle;
 }
 
 bool Camera::inTestMode() {
+    
     return testMode;
+}
+
+int Camera::avgImageIntensity() {
+    
+    return avgImgIntensity;
 }
 
 void Camera::printStatus() {
@@ -306,7 +318,7 @@ void Camera::captureFrame() {
     emit newCamFrame(camFrame(cropped).clone());
     
     /* remove ambient light */
-    camFrame /= ambientImage;
+    camFrame -= ambientImage;
     
     /* cropping image in center to power-of-2 size */
     cv::Mat croppedFrame = camFrame(cropped).clone();

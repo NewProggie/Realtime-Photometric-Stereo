@@ -24,13 +24,13 @@ class PhotometricStereo : public QObject {
     Q_OBJECT
     
 public:
-    PhotometricStereo(int width, int height);
+    PhotometricStereo(int width, int height, int imageIntensity);
     ~PhotometricStereo();
     void execute();
     float getMaxPQ();
     float getLambda();
     float getMu();
-    float getSlope();
+    float getMinIntensity();
     float getUnsharpScale();
     
 public slots:
@@ -38,7 +38,7 @@ public slots:
     void setMaxPQ(double val);
     void setLambda(double val);
     void setMu(double val);
-    void setSlope(int val);
+    void setMinIntensity(int val);
     void setUnsharpScale(int val);
     
 signals:
@@ -68,7 +68,7 @@ private:
     /* ps parameters adjustable by user input */
     float maxpq;
     float lambda, mu;
-    float slope;
+    int minIntensity;
     float unsharpScaleFactor;
     
     /* ps images */

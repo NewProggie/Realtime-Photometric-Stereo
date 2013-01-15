@@ -40,12 +40,15 @@ ModelWidget::ModelWidget(QWidget *parent, int modelWidth, int modelHeight) : QVT
     polyData->SetPoints(points);
     polyData->SetPolys(vtkTriangles);
     
-    /* create two lights */
+    /* create two scene lights illuminating both sides of 2.5D model */
     light1 = vtkSmartPointer<vtkLight>::New();
-    light1->SetPosition(-1, 1, 1);
+    light1->SetPosition(0, 0, -1);
+    light1->SetLightTypeToSceneLight();
     renderer->AddLight(light1);
+    
     light2 = vtkSmartPointer<vtkLight>::New();
-    light2->SetPosition(1, -1, -1);
+    light2->SetPosition(0, 0, 1);
+    light2->SetLightTypeToSceneLight();
     renderer->AddLight(light2);
 
     modelMapper->SetInput(polyData);
@@ -59,12 +62,10 @@ ModelWidget::ModelWidget(QWidget *parent, int modelWidth, int modelHeight) : QVT
     modelActor->SetMapper(modelMapper);
     
     /* setting some properties to make it look just right */
-    modelActor->GetProperty()->SetSpecularColor(1, 1, 1);
-    modelActor->GetProperty()->SetAmbient(0.2);
-    modelActor->GetProperty()->SetDiffuse(0.2);
+    modelActor->GetProperty()->SetSpecular(0.25);
+    modelActor->GetProperty()->SetAmbient(0.25);
+    modelActor->GetProperty()->SetDiffuse(0.25);
     modelActor->GetProperty()->SetInterpolationToPhong();
-    modelActor->GetProperty()->SetSpecular(0.8);
-    modelActor->GetProperty()->SetSpecularPower(8.0);
     
     renderer->AddActor(modelActor);
 }
